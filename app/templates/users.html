@@ -1,0 +1,253 @@
+{%- extends "base.html" -%}
+{%- block content -%}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div>
+            <h1 class="text-3xl font-extrabold mb-2 text-brand">User Directory</h1>
+            <p class="text-lg text-gray-600 mb-6">Explore the list of users registered in the Overtime Logged system.</p>   
+        </div>
+        <!-- <a href="{{ url_for('auth.register') }}" class="inline-flex items-center px-4 py-2 mb-6 border border-transparent text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-shadow shadow-sm hover:shadow-md">
+            Add New User
+        </a> -->
+        <!-- <p>{{ current_user.role }}</p> -->
+        <div class="flex flex-wrap gap-2 mb-6">
+          <button id="openImportModal" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-shadow shadow-sm hover:shadow-md">
+            Import Users
+          </button>
+          <button id="bulkDeleteBtn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-shadow shadow-sm hover:shadow-md">
+            Bulk Delete Selected
+          </button>
+        </div>
+        <!-- flash messages for success or error -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-4">
+              {% for category, message in messages %}
+                <div class="p-4 mb-2 text-sm rounded-lg {% if category == 'success' %}bg-green-100 text-green-700{% elif category == 'error' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        {% if users %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <input id="selectAll" type="checkbox" class="form-checkbox h-4 w-4 text-brand" />
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for user in users %}
+                            <tr id="user-row-{{ user.id }}" data-user-id="{{ user.id }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <input type="checkbox" class="select-user h-4 w-4 text-brand" value="{{ user.id }}" />
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.sid }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <span class="name-text">{{ user.name }}</span>
+                                  <input type="text" class="name-input hidden w-full border border-brand/30 rounded px-2 py-1" value="{{ user.name }}" />
+                                </td>                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <span class="email-text">{{ user.email }}</span>
+                                  <input type="email" class="email-input hidden w-full border border-brand/30 rounded px-2 py-1" value="{{ user.email }}" />
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex gap-2">
+                                  <button class="modify-btn inline-flex items-center px-2 py-1 text-sm font-medium rounded bg-brand text-white hover:bg-brand-700">Modify</button>
+                                  <button class="delete-btn inline-flex items-center px-2 py-1 text-sm font-medium rounded bg-red-500 text-white hover:bg-red-600">Delete</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if pagination.pages > 1 %}
+              <div class="mt-4 flex items-center justify-between">
+                <p class="text-sm text-gray-600">Showing page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} users)</p>
+                <div class="inline-flex gap-1">
+                  <a href="?page={{ pagination.prev_num if pagination.has_prev else 1 }}&per_page={{ per_page }}" class="px-3 py-1 rounded-lg border border-gray-200 text-sm font-medium {% if not pagination.has_prev %}opacity-40 pointer-events-none{% endif %} bg-white text-gray-700 hover:bg-gray-50">Prev</a>
+                  {% for p in range(1, pagination.pages+1) %}
+                    <a href="?page={{ p }}&per_page={{ per_page }}" class="px-3 py-1 rounded-lg border text-sm font-medium {% if p == pagination.page %}border-brand bg-brand text-white{% else %}border-gray-200 bg-white text-gray-700 hover:bg-gray-50{% endif %}">{{ p }}</a>
+                  {% endfor %}
+                  <a href="?page={{ pagination.next_num if pagination.has_next else pagination.pages }}&per_page={{ per_page }}" class="px-3 py-1 rounded-lg border border-gray-200 text-sm font-medium {% if not pagination.has_next %}opacity-40 pointer-events-none{% endif %} bg-white text-gray-700 hover:bg-gray-50">Next</a>
+                </div>
+              </div>
+            {% endif %}
+
+        {% else %}
+            <p class="text-sm text-gray-500">No other users found.</p>
+        {% endif %}
+    </div>
+
+    <!-- Import users modal -->
+    <div id="importModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl ring-1 ring-brand/30">
+        <div class="flex justify-between items-center border-b border-gray-200 px-6 py-3">
+          <h2 class="text-lg font-bold text-brand">Import Users</h2>
+          <button id="closeImportModal" class="text-gray-500 hover:text-brand" aria-label="Close import modal">✕</button>
+        </div>
+        <form action="{{ url_for('auth.import_users') }}" method="post" enctype="multipart/form-data" class="px-6 py-5 space-y-4">
+          <p class="text-sm text-gray-600">Upload a CSV file containing `email` and `name` columns. Example header: <code>email,name</code></p>
+          <div>
+            <label for="user_file" class="block text-sm font-medium text-gray-700">CSV file</label>
+            <input type="file" id="user_file" name="user_file" accept="text/csv" required class="mt-1 block w-full text-sm text-gray-700" />
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand-700 transition">Upload</button>
+            <button type="button" id="cancelImport" class="inline-flex items-center px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+<script>
+  const openImportModal = document.getElementById('openImportModal');
+  const closeImportModal = document.getElementById('closeImportModal');
+  const cancelImport = document.getElementById('cancelImport');
+  const importModal = document.getElementById('importModal');
+
+  function setModalOpen(open) {
+    importModal.classList.toggle('hidden', !open);
+  }
+
+  openImportModal.addEventListener('click', () => setModalOpen(true));
+  closeImportModal.addEventListener('click', () => setModalOpen(false));
+  cancelImport.addEventListener('click', () => setModalOpen(false));
+
+  importModal.addEventListener('click', (event) => {
+    if (event.target === importModal) {
+      setModalOpen(false);
+    }
+  });
+
+  function notify(message, success=true) {
+    const notice = document.createElement('div');
+    notice.textContent = message;
+    notice.className = `fixed bottom-4 right-4 px-4 py-2 rounded shadow-lg ${success ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`;
+    document.body.appendChild(notice);
+    setTimeout(() => notice.remove(), 3500);
+  }
+
+  document.querySelectorAll('.modify-btn').forEach(button => {
+    button.addEventListener('click', async (event) => {
+      const row = event.target.closest('tr');
+      const userId = row.dataset.userId;
+      const nameText = row.querySelector('.name-text');
+      const emailText = row.querySelector('.email-text');
+      const nameInput = row.querySelector('.name-input');
+      const emailInput = row.querySelector('.email-input');
+
+      const inEdit = !nameInput.classList.contains('hidden');
+      if (!inEdit) {
+        nameText.classList.add('hidden');
+        emailText.classList.add('hidden');
+        nameInput.classList.remove('hidden');
+        emailInput.classList.remove('hidden');
+        event.target.textContent = 'Save';
+        event.target.classList.remove('bg-brand');
+        event.target.classList.add('bg-blue-600');
+        return;
+      }
+
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      if (!name || !email) {
+        notify('Name and email cannot be empty.', false);
+        return;
+      }
+
+      const response = await fetch(`/users/${userId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        notify(data.message || 'Update failed', false);
+        return;
+      }
+
+      nameText.textContent = data.user.name;
+      emailText.textContent = data.user.email;
+      nameText.classList.remove('hidden');
+      emailText.classList.remove('hidden');
+      nameInput.classList.add('hidden');
+      emailInput.classList.add('hidden');
+
+      event.target.textContent = 'Modify';
+      event.target.classList.remove('bg-blue-600');
+      event.target.classList.add('bg-brand');
+      notify('User updated successfully.', true);
+    });
+  });
+
+  document.querySelectorAll('.delete-btn').forEach(button => {
+    button.addEventListener('click', async (event) => {
+      const row = event.target.closest('tr');
+      const userId = row.dataset.userId;
+      if (!confirm('Delete this user? This action cannot be undone.')) return;
+
+      const response = await fetch(`/users/${userId}/delete`, { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        notify(data.message || 'Delete failed', false);
+        return;
+      }
+
+      row.remove();
+      notify('User deleted successfully.', true);
+    });
+  });
+
+  const selectAll = document.getElementById('selectAll');
+  const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+  selectAll.addEventListener('change', (e) => {
+    document.querySelectorAll('.select-user').forEach(cb => cb.checked = e.target.checked);
+  });
+
+  bulkDeleteBtn.addEventListener('click', async () => {
+    const selected = Array.from(document.querySelectorAll('.select-user:checked')).map(cb => cb.value);
+    if (!selected.length) {
+      return notify('No users selected for bulk delete.', false);
+    }
+
+    if (!confirm(`Delete ${selected.length} selected user(s)? This cannot be undone.`)) {
+      return;
+    }
+
+    const response = await fetch('/users/delete-bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_ids: selected })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      notify(data.message || 'Bulk delete failed.', false);
+      return;
+    }
+
+    data.deleted_ids.forEach(id => {
+      const row = document.getElementById(`user-row-${id}`);
+      if (row) row.remove();
+    });
+
+    notify(data.message || 'Bulk delete successful.', true);
+
+    setTimeout(() => {
+      if (document.querySelectorAll('.select-user').length === 0) {
+        location.href = '/users';
+      }
+    }, 500);
+
+
+  });
+</script>
+
+{%- endblock -%}

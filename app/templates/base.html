@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overtime Logged</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                DEFAULT: '#4FB477',
+                50: '#EFF9F1',
+                100: '#DDF2E5',
+                200: '#BCE6CC',
+                300: '#99D8B1',
+                400: '#6FC990',
+                500: '#4FB477',
+                600: '#3E8B66',
+                700: '#307152',
+                800: '#265A40',
+                900: '#1E4833'
+              }
+            },
+            boxShadow: {
+              "soft": "0 8px 24px rgba(79, 180, 119, 0.20)"
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body>
+<nav class="bg-brand text-white shadow-lg">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16">
+      <div class="flex">
+        <div class="flex-shrink-0 flex items-center">
+          <a href="/" class="text-xl font-semibold text-gray-800">Overtime Logged</a>
+        </div>
+        <div class="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
+          <a href="/" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">Home</a>
+         {% if current_user.is_authenticated  and current_user.role != 'manager' %}
+            <a href="/log" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">Log Overtime</a>
+          {% endif %}
+          <a href="/entries" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">View Entries</a>
+          {% if current_user.role == 'manager' %}
+            <a href="/users" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">User</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="hidden sm:flex sm:items-center">
+        <a href="/logout" class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-200 shadow-soft">
+          Logout
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+    {%- block content -%}
+    {%- endblock -%}
+
+<footer class="mt-12 w-full bg-brand text-white py-4 shadow-inner">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm sm:text-base">
+    <p class="font-medium">Overtime Logged • Powered by team productivity</p>
+    <p class="text-brand-50 mt-1">&copy; {{ current_year if current_year else "2026" }} • built with Flask, Tailwind, and a passion for clean UI.</p>
+  </div>
+</footer>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div id="flash-messages" class="hidden" data-flashes='{{ messages|tojson }}'></div>
+  {% endif %}
+{% endwith %}
+    <!-- Toastify JS CDN -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const flashContainer = document.getElementById('flash-messages');
+        if (!flashContainer) return;
+        let flashes;
+        try {
+          flashes = JSON.parse(flashContainer.dataset.flashes || '[]');
+        } catch (err) {
+          console.error('Invalid flash data', err);
+          flashes = [];
+        }
+
+        flashes.forEach(([category, message]) => {
+          const isError = category === 'error' || category === 'danger' || category === 'warning';
+          const bgColor = isError ? '#EF4444' : '#16A34A';
+          const textColor = '#FFFFFF';
+
+          Toastify({
+            text: message,
+            duration: 4000,
+            close: true,
+            gravity: 'top',
+            position: 'right',
+            backgroundColor: bgColor,
+            stopOnFocus: true,
+            style: { color: textColor, fontWeight: '600' }
+          }).showToast();
+        });
+      });
+    </script>
+    <!-- Bootstrap JS bundle (includes Popper) -->
+   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+</body>
+</html>

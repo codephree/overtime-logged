@@ -6,6 +6,7 @@ import pandas as pd
 from app.extensions import db
 import datetime
 from flask_login import login_required, current_user
+from app.helpers import log_action
 
 from app.models import OvertimeEntry, User
 
@@ -31,6 +32,7 @@ def log_overtime():
         db.session.add(entry)
         db.session.commit()
         flash('Overtime entry logged successfully!', 'success')
+        log_action(f"User {current_user.name} logged overtime entry for {entry.date} ({entry.hours} hours)")
         return redirect(url_for('main.view_entries'))
     
     user = User.query.all()
@@ -103,7 +105,7 @@ def view_entries():
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     paged_entries = filtered[start_idx:end_idx]
-
+    log_action(f"User {current_user.name} viewed entries page {page} with filters - Start: {start}, End: {end}, Employee: {employee_name}")
     return render_template(
         'entries.html',
         entries=paged_entries,
@@ -122,6 +124,7 @@ def view_entries():
 @login_required
 def approve_entry(entry_id):
     if current_user.role != 'manager':
+        log_action(f"Unauthorized approval attempt by user {current_user.name} on entry {entry_id}", success=False)
         return {'success': False, 'message': 'Only managers can approve entries'}, 403
     
     entry = OvertimeEntry.query.get_or_404(entry_id)
@@ -133,6 +136,7 @@ def approve_entry(entry_id):
     entry.approved_by = current_user.id
     entry.updated_at = datetime.datetime.now()
     db.session.commit()
+    log_action(f"Manager {current_user.name} approved entry {entry_id} for employee ID {entry.employee_id} with approved hours {approved_hours}")
     return {'success': True, 'message': 'Entry approved', 'entry_id': entry_id, 'status': entry.status, 'approved_hours': entry.approved_hours}
 
 
@@ -201,4 +205,5 @@ def download_entries():
         df.to_excel(writer, index=False, sheet_name='Overtime')
     output.seek(0)
     flash('Overtime entries downloaded successfully!', 'success')
+    log_action(f"User {current_user.name} downloaded entries with filters - Start: {start}, End: {end}, Employee: {employee_name}")
     return send_file(output, download_name='overtime_entries.xlsx', as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')   

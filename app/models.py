@@ -73,3 +73,5 @@ class LoginAttempt(db.Model):
     def __repr__(self):
         return f'<LoginAttempt User {self.user_id} at {self.timestamp} - {"Success" if self.successful else "Failure"}>'
     
+
+  

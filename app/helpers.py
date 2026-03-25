@@ -4,7 +4,8 @@ import smtplib
 from functools import wraps
 from flask import abort, flash, redirect, url_for
 from flask_login import current_user
-
+from log_symbols import LogSymbols
+import logging
 
 def send_mail(to, subject, body):
     #  e4ff68eb89fada
@@ -82,3 +83,10 @@ def admin_required(func):
     
     return wrapper
 
+
+def log_action(action, success=True):
+    logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+    symbol = LogSymbols.SUCCESS if success else LogSymbols.ERROR
+    logging.info(f"{symbol} {action}")
+
+    

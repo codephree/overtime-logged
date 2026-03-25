@@ -10,7 +10,7 @@ A Flask-based overtime tracking application with user roles (staff/managers), ap
 - Entry status tracking (pending/approved)
 - Personal and team analytics dashboards
 - Pagination, CSV/XLSX export
-- Toastify notifications for app alerts
+- Flask-Toastr notifications for app alerts
 - Error templates (400/403/404/500)
 
 ## Tech stack
@@ -92,7 +92,7 @@ flask run --port=10010
 4. View approval status on dashboard
 
 ## Toast notifications
-- Built with Toastify in `app/templates/base.html`
+- Built with Flask-Toastr in `app/templates/base.html`
 - All Flask flash messages are now auto-converted to toast notifications.
 
 ## Error pages

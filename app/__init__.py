@@ -8,7 +8,7 @@ from flask_login import current_user, login_required
 from app.models import OvertimeEntry, User
 from sqlalchemy import func
 from datetime import datetime, timedelta
-
+from flask_toastr import Toastr
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -22,6 +22,13 @@ migrate.init_app(app, db)
 mail.init_app(app)
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
+
+# Initialize Flask-Toastr
+toastr = Toastr(app)
+
+
+# Disable the app's default logger
+app.logger.disabled = True
 
 # Create database tables if they don't exist
 with app.app_context():

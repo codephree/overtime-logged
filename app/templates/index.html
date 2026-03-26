@@ -4,7 +4,7 @@
   <!-- Header -->
   <div class="mb-8">
     {% if is_manager %}
-      <h1 class="text-4xl font-extrabold text-brand">Manager Dashboard</h1>
+      <h1 class="text-4xl font-extrabold text-brand">Manager Dashboard - {{ current_user_name }}</h1>
       <p class="text-lg text-gray-600 mt-2">Track and analyze overtime trends across your team.</p>
     {% else %}
       <h1 class="text-4xl font-extrabold text-brand">My Overtime Dashboard</h1>

@@ -74,4 +74,13 @@ class LoginAttempt(db.Model):
         return f'<LoginAttempt User {self.user_id} at {self.timestamp} - {"Success" if self.successful else "Failure"}>'
     
 
+class Configuration(db.Model):
+    __tablename__ = 'ot_configuration'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(45), nullable = False)
+    value = db.Column(db.String(200), nullable = False)
+    created_at = db.Column(db.DateTime, default=datetime.now())
+
+    def __repr__(self):
+        return f'{self.name} - {self.value}'
   

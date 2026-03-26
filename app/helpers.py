@@ -2,75 +2,12 @@ from flask_mail import Message
 from app.extensions import mail
 import smtplib
 from functools import wraps
-from flask import abort, flash, redirect, url_for
+from flask import abort, flash, redirect, url_for, render_template
 from flask_login import current_user
 from log_symbols import LogSymbols
 import logging
+from app.models import User, OvertimeEntry, OTP
 
-def send_mail(to, subject, body):
-    #  e4ff68eb89fada
-    # Placeholder function for sending email
-    with smtplib.SMTP("sandbox.smtp.mailtrap.io", 2525) as server:
-        server.starttls()
-        server.login("35ac86847482e9", "e4ff68eb89fada")
-        sender = "Overtime Tracker <overtimetracker@example.com>"
-        message = f"""\
-                    Subject: {subject}
-                    To: {to}
-                    From: {sender}{body}"""
-        server.sendmail(sender, to, message)    
-
-    # print(f"Sending email to {to} with subject '{subject}' and body:\n{body}")
-
-def send_mail_flask(to, subject, body, user):
-    # Example using Flask-Mail
-    msg = Message(subject, sender="Overtime Tracker <overtimetracker@example.com>", recipients=[to])
-    msg.body = generate_html_message(subject, body, user)
-    msg.html = generate_html_message(subject, body, user)
-    # Send the email using Flask-Mail
-    mail.send(msg)
-
-
-def generate_html_message(subject, body, user):
-    return f"""
-    <html>
-        <head>
-            <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    background-color: #f9f9f9;
-                    color: #333;
-                    padding: 20px;
-                }}
-                .container {{
-                    max-width: 600px;
-                    margin: 0 auto;
-                    background-color: #fff;
-                    padding: 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }}
-                h1 {{
-                    color: #007BFF;
-                }}
-                p {{
-                    font-size: 16px;
-                    line-height: 1.5;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1 style="color: #007BFF; text-align: center;">Overtime Tracker</h1>
-                <p>Dear {user.name},</p>
-                <p class="mt-4 mb-4">There's an attempt to login to your account:</p>
-                <p>{body}</p>
-                <p class="mt-4">If this was you, please ignore this email. If you did not attempt to login, we recommend changing your password immediately.</p>
-                <p class="mt-4">Best regards,<br>Overtime Tracker Team</p>
-            </div>
-        </body>
-    </html>
-    """
 
 def admin_required(func):
     @wraps(func)
@@ -89,4 +26,87 @@ def log_action(action, success=True):
     symbol = LogSymbols.SUCCESS if success else LogSymbols.ERROR
     logging.info(f"{symbol} {action}")
 
-    
+
+def send_mail_flask(to, subject, data):
+    # Example using Flask-Mail
+    msg = Message(subject, sender="Overtime Tracker <overtimetracker@example.com>", recipients=[to])
+    html_body = render_template('email.html', **data)  # Pass any necessary variables to the template
+    msg.html = html_body
+    # # Send the email using Flask-Mail
+    mail.send(msg)
+
+
+
+
+def send_approval_email(entry_id):
+    """Send approval notification email to the assigned manager"""
+    entry = OvertimeEntry.query.get(entry_id)
+    if not entry or not entry.approved_by:
+        return False
+
+    manager = User.query.get(entry.approved_by)
+    if not manager:
+        return False
+
+    employee = User.query.get(entry.employee_id)
+    if not employee:
+        return False
+
+    subject = f"Overtime Approval Needed: {employee.name} - {entry.date}"
+
+    # Render HTML template
+    html_body = render_template(
+        'email/manager_approval.html',
+        manager=manager,
+        employee=employee,
+        entry=entry,
+        subject=subject   
+    )
+
+    # Create and send email
+    msg = Message(
+        subject=subject,
+        recipients=[manager.email],
+        html=html_body,
+        sender="Overtime Tracker <overtimetracker@example.com>"
+    )
+
+    try:
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Failed to send approval email: {e}")
+        return False
+
+
+def send_otp_email(user_id, otp_code):
+    """Send OTP verification email to the user"""
+    user = User.query.get(user_id)
+    if not user:
+        return False
+
+    subject = "Your OTP Code - Secure Access"
+
+    # Render HTML template
+    html_body = render_template(
+        'email/otp.html',
+        user=user,
+        otp_code=otp_code,
+        subject=subject
+    )
+
+    # Create and send email
+    msg = Message(
+        subject=subject,
+        recipients=[user.email],
+        html=html_body,
+        sender="Overtime Tracker <overtimetracker@example.com>"
+    )
+
+    try:
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Failed to send OTP email: {e}")
+        return False
+

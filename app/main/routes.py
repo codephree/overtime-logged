@@ -6,8 +6,7 @@ import pandas as pd
 from app.extensions import db
 import datetime
 from flask_login import login_required, current_user
-from app.helpers import log_action
-
+from app.helpers import log_action, send_approval_email
 from app.models import OvertimeEntry, User
 
 entries = []  # simple in-memory storage; replace with DB for production
@@ -20,36 +19,60 @@ def log_overtime():
         # collect form data
         current_time = datetime.datetime.now()
 
+        approval_manager_id = request.form.get('approval_manager_id')
+        if approval_manager_id:
+            try:
+                approval_manager_id = int(approval_manager_id)
+            except ValueError:
+                approval_manager_id = None
+
         entry =  OvertimeEntry(
             employee_id=request.form['employee_id'],
             date=request.form['date'],
             hours=request.form['hours'],
             description=request.form['description'],
-            # creeated_at=current_time,
-            # updated_at=current_time
+            approved_by=approval_manager_id,
+            status='pending'
         )
+
         # print(entry)
         db.session.add(entry)
         db.session.commit()
+       
+        send_approval_email(entry.id)
+       
         flash('Overtime entry logged successfully!', 'success')
         log_action(f"User {current_user.name} logged overtime entry for {entry.date} ({entry.hours} hours)")
+        
         return redirect(url_for('main.view_entries'))
     
-    user = User.query.all()
-    # print(datetime.datetime.now())
-    return render_template('log.html', user=user)
+    managers = User.query.filter(User.role.ilike('%manager%')).order_by(User.name).all()
+    return render_template('log.html', managers=managers)
 
 
 @bp.route('/entries')
 @login_required
 def view_entries():
-    # query all entries with user info for only the current user if not manager, otherwise all entries
+    # prepare filter params
+    start = request.args.get('start_date')
+    end = request.args.get('end_date')
+    employee_name = request.args.get('employee_name')
+    assigned = request.args.get('assigned')
+
+    # Manager default should show entries assigned to them, unless explicitly set to all
     if current_user.role == 'manager':
-        entries = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id).all()
-        employees = User.query.filter(User.role != 'manager').order_by(User.name).all()  # Get all non-manager employees for filter
+        if assigned not in ['all', 'mine']:
+            assigned = 'mine'
+        query = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id)
+        if assigned == 'mine':
+            query = query.filter(OvertimeEntry.approved_by == current_user.id)
+        entries = query.all()
+        employees = User.query.filter(User.role != 'manager').order_by(User.name).all()
     else:
+        assigned = 'all'
         entries = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id).filter(OvertimeEntry.employee_id == current_user.id).all()
-        employees = []  # Staff don't need employee filter
+        employees = []
+
     entries = [{
         'id': e[0].id,
         'employee_id': e[1].id,
@@ -63,9 +86,6 @@ def view_entries():
         'series_id': e[1].sid
     } for e in entries]
 
-    start = request.args.get('start_date')
-    end = request.args.get('end_date')
-    employee_name = request.args.get('employee_name')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
 
@@ -113,6 +133,7 @@ def view_entries():
         start_date=start,
         end_date=end,
         employee_name=employee_name,
+        assigned=assigned,
         page=page,
         per_page=per_page,
         total_entries=total_items,
@@ -147,10 +168,14 @@ def download_entries():
     start = request.args.get('start_date')
     end = request.args.get('end_date')
     employee_name = request.args.get('employee_name')
-    
-    # Get entries based on user role
+    assigned = request.args.get('assigned')
     if current_user.role == 'manager':
-        filtered = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id).all()
+        if assigned not in ['all', 'mine']:
+            assigned = 'mine'
+        query = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id)
+        if assigned == 'mine':
+            query = query.filter(OvertimeEntry.approved_by == current_user.id)
+        filtered = query.all()
     else:
         filtered = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id).filter(OvertimeEntry.employee_id == current_user.id).all()
     

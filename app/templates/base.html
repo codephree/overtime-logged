@@ -52,6 +52,7 @@
           <a href="/entries" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">View Entries</a>
           {% if current_user.role == 'manager' %}
             <a href="/users" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">User</a>
+            <a href="{{ url_for('auth.settings') }}" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">Settings</a>
           {% endif %}
         </div>
       </div>

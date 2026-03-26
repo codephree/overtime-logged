@@ -28,7 +28,7 @@ toastr = Toastr(app)
 
 
 # Disable the app's default logger
-app.logger.disabled = True
+# app.logger.disabled = True
 
 # Create database tables if they don't exist
 with app.app_context():
@@ -43,46 +43,50 @@ def index():
     is_manager = current_user.role and 'manager' in current_user.role.lower()
     
     if is_manager:
-        # Manager view: all overtime analytics
-        total_entries = OvertimeEntry.query.count()
-        total_hours = db.session.query(func.sum(OvertimeEntry.hours)).scalar() or 0
+        # Manager view: only entries assigned to this manager
+        manager_entries = OvertimeEntry.query.filter_by(approved_by=current_user.id)
+        total_entries = manager_entries.count()
+        total_hours = db.session.query(func.sum(OvertimeEntry.hours)).filter(OvertimeEntry.approved_by == current_user.id).scalar() or 0
         total_hours = float(total_hours)
-        
-        pending_entries = OvertimeEntry.query.filter_by(status='pending').count()
-        approved_entries = OvertimeEntry.query.filter_by(status='approved').count()
-        
+
+        pending_entries = manager_entries.filter_by(status='pending').count()
+        approved_entries = manager_entries.filter_by(status='approved').count()
+
         now = datetime.now()
         month_start = datetime(now.year, now.month, 1)
         month_end = datetime(now.year, now.month, 28) if now.month < 12 else datetime(now.year + 1, 1, 1)
-        
+
         this_month_hours = db.session.query(func.sum(OvertimeEntry.hours)).filter(
+            OvertimeEntry.approved_by == current_user.id,
             OvertimeEntry.date >= month_start.isoformat().split('T')[0],
             OvertimeEntry.date < month_end.isoformat().split('T')[0]
         ).scalar() or 0
         this_month_hours = float(this_month_hours)
-        
+
         top_users = db.session.query(User.name, func.sum(OvertimeEntry.hours).label('total_hours')).join(
             OvertimeEntry, OvertimeEntry.employee_id == User.id
         ).filter(
+            OvertimeEntry.approved_by == current_user.id,
             OvertimeEntry.date >= month_start.isoformat().split('T')[0],
             OvertimeEntry.date < month_end.isoformat().split('T')[0]
         ).group_by(User.id).order_by(func.sum(OvertimeEntry.hours).desc()).limit(5).all()
-        
+
         top_users = [{'name': u[0], 'hours': float(u[1])} for u in top_users]
-        
+
         recent_entries = db.session.query(OvertimeEntry, User).join(
             User, OvertimeEntry.employee_id == User.id
-        ).order_by(OvertimeEntry.date.desc()).limit(5).all()
-        
+        ).filter(OvertimeEntry.approved_by == current_user.id).order_by(OvertimeEntry.date.desc()).limit(5).all()
+
         recent_entries = [{
             'employee_name': e[1].name,
             'date': e[0].date,
             'hours': e[0].hours,
             'status': e[0].status
         } for e in recent_entries]
-        
+
         return render_template('index.html',
                               is_manager=True,
+                              current_user_name=current_user.name,
                               total_entries=total_entries,
                               total_hours=total_hours,
                               pending_entries=pending_entries,
@@ -134,7 +138,7 @@ def page_not_found(e):
 
 @app.errorhandler(500)
 def internal_server_error(e):
-    return render_template('error/500.html'), 500
+    return render_template('error/500.html', error=e), 500
 
 @app.errorhandler(403)
 def forbidden(e):

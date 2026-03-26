@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-4xl font-extrabold text-brand">Application Settings</h1>
+    <p class="text-lg text-gray-600 mt-2">Customize your overtime tracking system appearance and information.</p>
+  </div>
+
+  <!-- Settings Form -->
+  <form method="POST" action="{{ url_for('auth.settings') }}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+    <div class="space-y-8">
+      <!-- App Identity Section -->
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-brand/30">🏢 Application Identity</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- App Name -->
+          <div class="space-y-2">
+            <label for="app_name" class="block text-sm font-semibold text-gray-700">Application Name</label>
+            <input type="text" 
+                   id="app_name" 
+                   name="app_name" 
+                   value="{{ settings.app_name or '' }}"
+                   placeholder="Overtime Tracker"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent shadow-sm transition">
+            <p class="text-xs text-gray-500">Name displayed in navigation and titles</p>
+          </div>
+
+          <!-- App Heading -->
+          <div class="space-y-2">
+            <label for="app_heading" class="block text-sm font-semibold text-gray-700">Dashboard Heading</label>
+            <input type="text" 
+                   id="app_heading" 
+                   name="app_heading" 
+                   value="{{ settings.app_heading or '' }}"
+                   placeholder="Overtime Management System"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent shadow-sm transition">
+            <p class="text-xs text-gray-500">Main heading displayed on dashboard</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Branding Section -->
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-brand/30">🎨 Branding</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Primary Color -->
+          <div class="space-y-4">
+            <div>
+              <label for="primary_color" class="block text-sm font-semibold text-gray-700">Primary Brand Color</label>
+              <div class="flex gap-3 mt-2">
+                <input type="color" 
+                       id="primary_color" 
+                       name="primary_color"
+                       value="{{ settings.primary_color or '#4FB477' }}"
+                       class="w-20 h-20 border border-gray-300 rounded-lg cursor-pointer shadow-sm">
+                <div>
+                  <input type="text" 
+                         id="color_hex"
+                         value="{{ settings.primary_color or '#4FB477' }}"
+                         class="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent text-sm font-mono shadow-sm transition"
+                         readonly>
+                  <p class="text-xs text-gray-500 mt-1">Used for buttons, links, and accents</p>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Changes apply to UI elements throughout the application.</p>
+            </div>
+          </div>
+
+          <!-- Company Name -->
+          <div class="space-y-2">
+            <label for="company_name" class="block text-sm font-semibold text-gray-700">Company Name</label>
+            <input type="text" 
+                   id="company_name" 
+                   name="company_name" 
+                   value="{{ settings.company_name or '' }}"
+                   placeholder="Your Company"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent shadow-sm transition">
+            <p class="text-xs text-gray-500">Used in emails and official documents</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Communication Section -->
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-brand/30">📧 Communication</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Company Email -->
+          <div class="space-y-2">
+            <label for="company_email" class="block text-sm font-semibold text-gray-700">Company Email</label>
+            <input type="email" 
+                   id="company_email" 
+                   name="company_email" 
+                   value="{{ settings.company_email or '' }}"
+                   placeholder="info@example.com"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent shadow-sm transition">
+            <p class="text-xs text-gray-500">Used for email notifications and contact information</p>
+          </div>
+
+          <!-- Footer Text -->
+          <div class="space-y-2">
+            <label for="footer_text" class="block text-sm font-semibold text-gray-700">Footer Text</label>
+            <input type="text" 
+                   id="footer_text" 
+                   name="footer_text" 
+                   value="{{ settings.footer_text or '' }}"
+                   placeholder="Overtime Tracker © 2025"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent shadow-sm transition">
+            <p class="text-xs text-gray-500">Displayed at the bottom of pages</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview Section -->
+      <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6 border border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">📋 Preview</h3>
+        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+          <div class="mb-6 pb-6 border-b border-gray-200">
+            <p class="text-sm text-gray-600 mb-2">App Name (Navigation):</p>
+            <p class="text-xl font-bold" id="preview_app_name">{{ settings.app_name or 'Overtime Tracker' }}</p>
+          </div>
+          <div class="mb-6 pb-6 border-b border-gray-200">
+            <p class="text-sm text-gray-600 mb-2">Dashboard Heading:</p>
+            <p class="text-3xl font-bold" id="preview_heading" style="color: {{ settings.primary_color or '#4FB477' }}">{{ settings.app_heading or 'Overtime Management System' }}</p>
+          </div>
+          <div class="mb-6 pb-6 border-b border-gray-200">
+            <p class="text-sm text-gray-600 mb-2">Brand Color Sample:</p>
+            <div class="flex gap-3 items-center">
+              <div id="preview_color" style="background-color: {{ settings.primary_color or '#4FB477' }}" class="w-12 h-12 rounded-lg shadow-sm"></div>
+              <code id="preview_color_hex" class="text-sm font-mono text-gray-700 bg-gray-100 px-3 py-2 rounded">{{ settings.primary_color or '#4FB477' }}</code>
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 mb-2">Footer Text:</p>
+            <p class="text-xs text-gray-500" id="preview_footer">{{ settings.footer_text or 'Overtime Tracker © 2025' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-4 pt-6 border-t border-gray-200">
+        <button type="submit" class="flex-1 inline-flex justify-center items-center gap-2 bg-brand text-white font-semibold py-3 px-6 rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 transition">
+          <span>💾 Save Settings</span>
+        </button>
+        <a href="{{ url_for('index') }}" class="flex-1 inline-flex justify-center items-center font-medium text-brand bg-white border-2 border-brand py-3 px-6 rounded-lg hover:bg-brand/5 transition">
+          Cancel
+        </a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Info Box -->
+  <div class="mt-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+    <div class="flex gap-3">
+      <span class="text-2xl">ℹ️</span>
+      <div>
+        <h4 class="font-semibold text-blue-900">Configuration Tips</h4>
+        <ul class="text-sm text-blue-800 mt-2 space-y-1 ml-4 list-disc">
+          <li>Changes to the primary color are reflected throughout the application immediately</li>
+          <li>Application name appears in the browser title and navigation menu</li>
+          <li>Dashboard heading is displayed on the home page for all users</li>
+          <li>Company information is used in automated emails and official documents</li>
+          <li>All changes are saved to the database and persist across sessions</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Real-time color picker sync
+  const colorInput = document.getElementById('primary_color');
+  const hexInput = document.getElementById('color_hex');
+  const previewColor = document.getElementById('preview_color');
+  const previewColorHex = document.getElementById('preview_color_hex');
+
+  if (colorInput) {
+    colorInput.addEventListener('input', function() {
+      hexInput.value = this.value;
+      previewColor.style.backgroundColor = this.value;
+      previewColorHex.textContent = this.value;
+    });
+  }
+
+  // Real-time text preview updates
+  const appNameInput = document.getElementById('app_name');
+  const appHeadingInput = document.getElementById('app_heading');
+  const footerInput = document.getElementById('footer_text');
+  const previewAppName = document.getElementById('preview_app_name');
+  const previewHeading = document.getElementById('preview_heading');
+  const previewFooter = document.getElementById('preview_footer');
+
+  if (appNameInput) {
+    appNameInput.addEventListener('input', function() {
+      previewAppName.textContent = this.value || 'Overtime Tracker';
+    });
+  }
+
+  if (appHeadingInput) {
+    appHeadingInput.addEventListener('input', function() {
+      previewHeading.textContent = this.value || 'Overtime Management System';
+    });
+  }
+
+  if (footerInput) {
+    footerInput.addEventListener('input', function() {
+      previewFooter.textContent = this.value || 'Overtime Tracker © 2025';
+    });
+  }
+</script>
+{% endblock %}

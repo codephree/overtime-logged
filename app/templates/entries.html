@@ -35,6 +35,15 @@
         </div>
       </div>
       {% endif %}
+      {% if current_user.role == 'manager' %}
+      <div class="space-y-1">
+        <label for="assigned" class="block text-sm font-semibold text-brand">Assigned to</label>
+        <select name="assigned" id="assigned" class="mt-1 block w-full px-3 py-2 border border-brand/40 rounded-lg bg-white text-sm shadow-sm focus:ring-2 focus:ring-brand focus:border-transparent transition">
+          <option value="all" {% if assigned == 'all' or not assigned %}selected{% endif %}>All assigned entries</option>
+          <option value="mine" {% if assigned == 'mine' %}selected{% endif %}>Assigned to me</option>
+        </select>
+      </div>
+      {% endif %}
       <div class="space-y-1">
         <label for="per_page" class="block text-sm font-semibold text-brand">Page size</label>
         <select name="per_page" id="per_page" class="mt-1 block w-full px-3 py-2 border border-brand/40 rounded-lg bg-white text-sm shadow-sm focus:ring-2 focus:ring-brand focus:border-transparent transition">
@@ -48,12 +57,12 @@
         <button type="submit" class="flex-1 inline-flex justify-center items-center gap-2 bg-brand text-white font-semibold py-2 px-4 rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 transition">
           <span>Filter</span>
         </button>
-        {% if start_date or end_date or employee_name %}
+        {% if start_date or end_date or employee_name or (assigned and assigned != 'all') %}
         <a href="/entries" class="flex-1 inline-flex justify-center items-center font-medium text-brand bg-white border border-brand/40 py-2 px-4 rounded-lg hover:bg-brand/10 transition">Clear</a>
         {% endif %}
       </div>
     </div>
-    <p class="mt-3 text-xs text-brand">Showing entries between selected dates{% if current_user.role == 'manager' %} and for selected employee{% endif %}. Leave blank for all records.</p>
+    <p class="mt-3 text-xs text-brand">Showing entries between selected dates{% if current_user.role == 'manager' %}{% if employee_name %} and employee '{{ employee_name }}'{% endif %}{% if assigned and assigned == 'mine' %} assigned to you{% endif %}{% endif %}. Leave blank for all records.</p>
   </form>
   {% if entries %}
     <div class="w-full overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
@@ -380,5 +389,4 @@
     });
   }
 </script>
-
 {% endblock %}

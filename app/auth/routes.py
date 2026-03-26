@@ -3,13 +3,13 @@ import csv
 
 from app.auth import bp as auth
 from flask import render_template, redirect, url_for, flash, request
-from app.models import User, OTP, LoginAttempt
+from app.models import User, OTP, LoginAttempt, Configuration
 from app.extensions import db, login_manager
 from app.helpers import send_mail_flask   
 from flask_login import login_user, logout_user, login_required, current_user
 import random
 import uuid
-from app.helpers import admin_required, log_action
+from app.helpers import admin_required, log_action, send_otp_email
 
 
 @auth.route('/login')
@@ -37,7 +37,7 @@ def send_otp():
         db.session.add(otp_entry)
         db.session.commit()
         # Add your OTP sending logic here
-        send_mail_flask(user.email, 'Your Overtime login OTP Code', f'Your OTP code is: {otp_code}', user)
+        send_otp_email(user_id=user.id, otp_code=otp_code)
         log_action(f"Sent OTP to user {user.name} ({user.email}) for login attempt")
         return {'success': True, 'message': 'OTP sent successfully', 'name': user.name}
 
@@ -240,3 +240,70 @@ def import_users():
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+@auth.route('/settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def settings():
+    """Configuration settings management page"""
+    if request.method == 'POST':
+        # Handle form submission
+        app_name = request.form.get('app_name', '').strip()
+        app_heading = request.form.get('app_heading', '').strip()
+        primary_color = request.form.get('primary_color', '').strip()
+        company_name = request.form.get('company_name', '').strip()
+        company_email = request.form.get('company_email', '').strip()
+        footer_text = request.form.get('footer_text', '').strip()
+
+        try:
+            # Define config fields to update
+            config_updates = {
+                'app_name': app_name or 'Overtime Tracker',
+                'app_heading': app_heading or 'Overtime Management System',
+                'primary_color': primary_color or '#4FB477',
+                'company_name': company_name or 'Your Company',
+                'company_email': company_email or 'info@example.com',
+                'footer_text': footer_text or 'Overtime Tracker © 2025'
+            }
+
+            for key, value in config_updates.items():
+                config = Configuration.query.filter_by(name=key).first()
+                if config:
+                    config.value = value
+                else:
+                    config = Configuration(name=key, value=value)
+                    db.session.add(config)
+
+            db.session.commit()
+            log_action(f"Admin {current_user.name} updated application settings")
+            flash('Configuration updated successfully!', 'success')
+            return redirect(url_for('auth.settings'))
+
+        except Exception as e:
+            db.session.rollback()
+            log_action(f"Admin {current_user.name} failed to update settings: {str(e)}", success=False)
+            flash(f'Error updating configuration: {str(e)}', 'error')
+
+    # Get current settings
+    settings_dict = {}
+    config_entries = Configuration.query.all()
+    for config in config_entries:
+        settings_dict[config.name] = config.value
+
+    # Set defaults if not found
+    defaults = {
+        'app_name': 'Overtime Tracker',
+        'app_heading': 'Overtime Management System',
+        'primary_color': '#4FB477',
+        'company_name': 'Your Company',
+        'company_email': 'info@example.com',
+        'footer_text': 'Overtime Tracker © 2025'
+    }
+
+    for key, value in defaults.items():
+        if key not in settings_dict:
+            settings_dict[key] = value
+
+    log_action(f"Admin {current_user.name} accessed application settings page")
+    return render_template('settings.html', settings=settings_dict)

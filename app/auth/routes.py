@@ -9,7 +9,7 @@ from app.helpers import send_mail_flask
 from flask_login import login_user, logout_user, login_required, current_user
 import random
 import uuid
-from app.helpers import admin_required, log_action, send_otp_email
+from app.helpers import admin_required, log_action, send_otp_email, sysadmin_required
 
 
 @auth.route('/login')
@@ -189,6 +189,10 @@ def delete_bulk_users():
     log_action(f"Admin {current_user.name} deleted users in bulk: {deleted_ids}")
     return {'success': True, 'message': f'Deleted {len(deleted_ids)} users.', 'deleted_ids': deleted_ids}
 
+# 4040423194
+# 4040423194
+
+# 1RCT-7344252
 
 @auth.route('/users/import', methods=['POST'])
 @login_required
@@ -244,7 +248,7 @@ def load_user(user_id):
 
 @auth.route('/settings', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@sysadmin_required
 def settings():
     """Configuration settings management page"""
     if request.method == 'POST':

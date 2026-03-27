@@ -162,7 +162,9 @@
     {% endif %}
   {% else %}
     <p class="text-gray-500">No entries logged yet.</p>
+    {% if current_user.role == 'staff'  %}
     <a href="/log" class="inline-block mt-4 bg-brand text-white py-2 px-4 rounded-lg hover:bg-brand-700 transition">Log one now</a>
+    {% endif %}
   {% endif %}
 </div>
 

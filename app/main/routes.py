@@ -222,13 +222,15 @@ def download_entries():
         entries = [e for e in entries if e['employee_name'] == employee_name]
     
     # Convert back to format expected by pandas
-    filtered = [(e['id'], e['employee_name'], e['email'], e['date'], e['approved_hours'] or e['hours'], e['description'], e['status']) for e in entries]
+    filtered = [(e['series_id'], e['employee_name'], e['email'], e['date'], e['approved_hours'] or e['hours'], e['description'], e['status']) for e in entries]
     
-    df = pd.DataFrame(filtered, columns=['ID', 'Employee Name', 'Email', 'Date', 'Hours', 'Description', 'Status'])
+    df = pd.DataFrame(filtered, columns=['Employee Number', 'Employee Name', 'Email', 'Date', 'Hours', 'Description', 'Status'])
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Overtime')
     output.seek(0)
-    flash('Overtime entries downloaded successfully!', 'success')
+    # flash('Overtime entries downloaded successfully!', 'success')
+    # return send_file(output, download_name='overtime_entries.xlsx', as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')   
+    excelfile = f"overtime_entries_{current_user.name}.xlsx"
     log_action(f"User {current_user.name} downloaded entries with filters - Start: {start}, End: {end}, Employee: {employee_name}")
-    return send_file(output, download_name='overtime_entries.xlsx', as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')   
+    return send_file(output, download_name=excelfile, as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')   

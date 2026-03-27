@@ -6,7 +6,7 @@ from flask import abort, flash, redirect, url_for, render_template
 from flask_login import current_user
 from log_symbols import LogSymbols
 import logging
-from app.models import User, OvertimeEntry, OTP
+from app.models import User, OvertimeEntry, OTP, Configuration
 
 
 def admin_required(func):
@@ -19,6 +19,17 @@ def admin_required(func):
         return func(*args, **kwargs)
     
     return wrapper
+
+def sysadmin_required(func):
+     @wraps(func)
+     def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'sysadmin':
+            # abort(403)  # Forbidden
+            flash('503: Access denied: Managers only.', 'error')
+            return redirect(url_for('index'))
+        return func(*args, **kwargs)
+    
+     return wrapper
 
 
 def log_action(action, success=True):
@@ -35,7 +46,25 @@ def send_mail_flask(to, subject, data):
     # # Send the email using Flask-Mail
     mail.send(msg)
 
+# def load_configuration():
+#         config = Configuration.query.all()
+        
+#         configs = [{
+#             'title': c[o].va 
+#         } for c in config]
 
+    #     entries = [{
+    #     'id': e[0].id,
+    #     'employee_id': e[1].id,
+    #     'employee_name': e[1].name,
+    #     'email': e[1].email,
+    #     'date': e[0].date,
+    #     'hours': e[0].hours,
+    #     'approved_hours': e[0].approved_hours,
+    #     'description': e[0].description,
+    #     'status': e[0].status if hasattr(e[0], 'status') else 'pending',
+    #     'series_id': e[1].sid
+    # } for e in filtered]
 
 
 def send_approval_email(entry_id):

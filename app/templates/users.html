@@ -10,6 +10,9 @@
         </a> -->
         <!-- <p>{{ current_user.role }}</p> -->
         <div class="flex flex-wrap gap-2 mb-6">
+          <button id="openNewModal" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-shadow shadow-sm hover:shadow-md">
+            Add new Users
+          </button>
           <button id="openImportModal" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-shadow shadow-sm hover:shadow-md">
             Import Users
           </button>
@@ -40,6 +43,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -56,6 +60,10 @@
                                 </td>                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                   <span class="email-text">{{ user.email }}</span>
                                   <input type="email" class="email-input hidden w-full border border-brand/30 rounded px-2 py-1" value="{{ user.email }}" />
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <span class="role-text">{{ user.role }}</span>
+                                  <input type="text" class="role-input hidden w-full border border-brand/30 rounded px-2 py-1" value="{{ user.role }}" />
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex gap-2">
                                   <button class="modify-btn inline-flex items-center px-2 py-1 text-sm font-medium rounded bg-brand text-white hover:bg-brand-700">Modify</button>
@@ -106,23 +114,76 @@
       </div>
     </div>
 
+    <!-- add new users modal  -->
+    <div id="newUserModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl ring-1 ring-brand/30">
+        <div class="flex justify-between items-center border-b border-gray-200 px-6 py-3">
+          <h2 class="text-lg font-bold text-brand">Add New User</h2>
+          <button id="closeNewModal" class="text-gray-500 hover:text-brand" aria-label="Close new user modal">✕</button>
+        </div>
+        <form action="{{ url_for('auth.register') }}" method="post" class="px-6 py-5 space-y-4">
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+            <input type="text" id="name" name="name" required class="mt-1 block w-full px-3 py-2 border border-brand/40 rounded-lg bg-white text-sm shadow-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+          </div>
+          <div>
+            <label for="sid" class="block text-sm font-medium text-gray-700">EmployeeID</label>
+            <input type="text" id="sid" name="sid" required class="mt-1 block w-full px-3 py-2 border border-brand/40 rounded-lg bg-white text-sm shadow-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+          </div>
+          <div>
+            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+            <input type="text" id="username" name="username" required class="mt-1 block w-full px-3 py-2 border border-brand/40 rounded-lg bg-white text-sm shadow-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" /> 
+          </div>
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+            <input type="email" id="email" name="email" required class="mt-1 block w-full px-3 py-2 border border-brand/40 rounded-lg bg-white text-sm shadow-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+          </div>
+          <div>
+            <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+            <select id="role" name="role" required class="mt-1 block w-full px-3 py-2 border border-brand/40 rounded-lg bg-white text-sm shadow-sm focus:ring-2 focus:ring-brand focus:border-transparent transition">
+              <option value="staff">Staff</option>
+              <option value="manager">Manager</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand-700 transition">Create User</button>
+            <button type="button" id="cancelNewModal" class="inline-flex items-center px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
 <script>
   const openImportModal = document.getElementById('openImportModal');
+  const openNewModal = document.getElementById('openNewModal');
+  const closeNewModal = document.getElementById('closeNewModal');
   const closeImportModal = document.getElementById('closeImportModal');
   const cancelImport = document.getElementById('cancelImport');
   const importModal = document.getElementById('importModal');
+  const newUserModal = document.getElementById('newUserModal');
 
-  function setModalOpen(open) {
-    importModal.classList.toggle('hidden', !open);
+  function setModalOpen(modal, open) {
+    modal.classList.toggle('hidden', !open);
   }
 
-  openImportModal.addEventListener('click', () => setModalOpen(true));
-  closeImportModal.addEventListener('click', () => setModalOpen(false));
-  cancelImport.addEventListener('click', () => setModalOpen(false));
+  openImportModal.addEventListener('click', () => setModalOpen(importModal, true));
+  closeImportModal.addEventListener('click', () => setModalOpen(importModal, false));
+  cancelImport.addEventListener('click', () => setModalOpen(importModal, false));
 
   importModal.addEventListener('click', (event) => {
     if (event.target === importModal) {
-      setModalOpen(false);
+      setModalOpen(importModal, false);
+    }
+  });
+
+  openNewModal.addEventListener('click', () => setModalOpen(newUserModal, true));
+  closeNewModal.addEventListener('click', () => setModalOpen(newUserModal, false));
+  cancelNewModal.addEventListener('click', () => setModalOpen(newUserModal, false));
+
+  newUserModal.addEventListener('click', (event) => {
+    if (event.target === newUserModal) {
+      setModalOpen(newUserModal, false);
     }
   });
 
@@ -142,6 +203,8 @@
       const emailText = row.querySelector('.email-text');
       const nameInput = row.querySelector('.name-input');
       const emailInput = row.querySelector('.email-input');
+      const roleText = row.querySelector('.role-text');
+      const roleInput = row.querySelector('.role-input');
 
       const inEdit = !nameInput.classList.contains('hidden');
       if (!inEdit) {
@@ -149,6 +212,7 @@
         emailText.classList.add('hidden');
         nameInput.classList.remove('hidden');
         emailInput.classList.remove('hidden');
+        roleInput.classList.remove('hidden');
         event.target.textContent = 'Save';
         event.target.classList.remove('bg-brand');
         event.target.classList.add('bg-blue-600');
@@ -157,15 +221,16 @@
 
       const name = nameInput.value.trim();
       const email = emailInput.value.trim();
-      if (!name || !email) {
-        notify('Name and email cannot be empty.', false);
+      const role = roleInput.value.trim();
+      if (!name || !email || !role) {
+        notify('Name, email, and role cannot be empty.', false);
         return;
       }
 
       const response = await fetch(`/users/${userId}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name, email, role }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -175,10 +240,13 @@
 
       nameText.textContent = data.user.name;
       emailText.textContent = data.user.email;
+      roleText.textContent = data.user.role;
       nameText.classList.remove('hidden');
       emailText.classList.remove('hidden');
+      roleText.classList.remove('hidden');
       nameInput.classList.add('hidden');
       emailInput.classList.add('hidden');
+      roleInput.classList.add('hidden');
 
       event.target.textContent = 'Modify';
       event.target.classList.remove('bg-blue-600');

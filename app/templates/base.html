@@ -38,6 +38,10 @@
 </head>
 <body>
 <nav class="bg-brand text-white shadow-lg">
+  {% set user_role = (current_user.role|lower if current_user.is_authenticated and current_user.role else '') %}
+  {% set is_manager_user = current_user.is_authenticated and 'manager' in user_role %}
+  {% set is_super_admin_user = current_user.is_authenticated and 'super' in user_role %}
+  {% set is_admin_user = is_manager_user or is_super_admin_user %}
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between h-16">
       <div class="flex">
@@ -46,14 +50,16 @@
         </div>
         <div class="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
           <a href="/" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">Home</a>
-         {% if current_user.is_authenticated  and current_user.role != 'manager' %}
+          {% if current_user.is_authenticated and not is_admin_user %}
             <a href="/log" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">Log Overtime</a>
           {% endif %}
-          <a href="/entries" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">View Entries</a>
-          {% if current_user.role == 'manager' %}
-            <a href="/users" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">User</a>
+          {% if current_user.is_authenticated %}
+            <a href="/entries" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">View Entries</a>
           {% endif %}
-          {%  if current_user.role == 'sysadmin' %}
+          {% if is_admin_user %}
+            <a href="/users" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">Users</a>
+          {% endif %}
+          {% if is_super_admin_user %}
             <a href="{{ url_for('auth.settings') }}" class="border-b-2 border-transparent text-white hover:border-white hover:text-white inline-flex items-center px-1 pt-1 text-sm font-medium">Settings</a>
           {% endif %}
         </div>

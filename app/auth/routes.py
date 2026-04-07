@@ -3,7 +3,7 @@ import csv
 
 from app.auth import bp as auth
 from flask import render_template, redirect, url_for, flash, request
-from app.models import User, OTP, LoginAttempt, Configuration
+from app.models import User, OTP, LoginAttempt, Configuration, OvertimeEntry
 from app.extensions import db, login_manager
 from app.helpers import send_mail_flask   
 from flask_login import login_user, logout_user, login_required, current_user
@@ -71,7 +71,8 @@ def verify_otp():
             log_action(f"User {user.name} logged in successfully from IP {request.remote_addr}")
             db.session.add(attempt)
             db.session.commit()
-             #delete the OTP entry after successful verification
+            
+            #delete the OTP entry after successful verification
             OTP.query.filter_by(id=otp_entry.id).delete()
               # In a real application, you would set a session or token here
               
@@ -93,22 +94,6 @@ def logout():
     logout_user()
     flash('You have been logged out.')
     return redirect(url_for('auth.login'))
-
-@auth.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        data = request.get_json()
-        email = data.get('email')
-        name = data.get('name')
-        user = User.query.filter_by(email=email).first()
-        if user:
-            return {'success': False, 'message': 'User already exists'}, 400
-        user = User(email=email, name=name)
-        db.session.add(user)
-        db.session.commit()
-        return {'success': True, 'message': 'User registered successfully'}
-    return render_template('auth/register.html')
-
 
 
 @auth.route('/users')
@@ -138,10 +123,11 @@ def update_user(user_id):
     data = request.get_json() or {}
     name = data.get('name', '').strip()
     email = data.get('email', '').strip()
+    role = data.get('role', '').strip()
 
-    if not name or not email:
+    if not name or not email or not role:
         log_action(f"Admin {current_user.name} attempted to update user {user_id} with invalid data", success=False)
-        return {'success': False, 'message': 'Name and email are required.'}, 400
+        return {'success': False, 'message': 'Name, email, and role are required.'}, 400
 
     existing = User.query.filter(User.email == email, User.id != user_id).first()
     if existing:
@@ -150,9 +136,24 @@ def update_user(user_id):
 
     user.name = name
     user.email = email
+    user.role = role
     db.session.commit()
-    log_action(f"Admin {current_user.name} updated user {user_id} - new name: {name}, new email: {email}")
-    return {'success': True, 'message': 'User updated successfully.', 'user': {'id': user.id, 'name': user.name, 'email': user.email}}
+    log_action(f"Admin {current_user.name} updated user {user_id} - new name: {name}, new email: {email}, new role: {role}")
+    return {'success': True, 'message': 'User updated successfully.', 'user': {'id': user.id, 'name': user.name, 'email': user.email, 'role': user.role}}
+
+
+def cleanup_user_constraints(user_ids):
+    """Remove or detach dependent records before deleting users."""
+    if not user_ids:
+        return
+
+    OvertimeEntry.query.filter(OvertimeEntry.approved_by.in_(user_ids)).update(
+        {OvertimeEntry.approved_by: None},
+        synchronize_session=False
+    )
+    OvertimeEntry.query.filter(OvertimeEntry.employee_id.in_(user_ids)).delete(synchronize_session=False)
+    OTP.query.filter(OTP.user_id.in_(user_ids)).delete(synchronize_session=False)
+    LoginAttempt.query.filter(LoginAttempt.user_id.in_(user_ids)).delete(synchronize_session=False)
 
 
 @auth.route('/users/<int:user_id>/delete', methods=['POST'])
@@ -164,16 +165,25 @@ def delete_user(user_id):
         return {'success': False, 'message': 'Cannot delete yourself.'}, 403
 
     user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    log_action(f"Admin {current_user.name} deleted user {user_id}")
-    return {'success': True, 'message': 'User deleted successfully.', 'id': user_id}
+
+    try:
+        cleanup_user_constraints([user.id])
+        db.session.delete(user)
+        db.session.commit()
+        log_action(f"Admin {current_user.name} deleted user {user_id} and related records")
+        return {'success': True, 'message': 'User deleted successfully.', 'id': user_id}
+    except Exception as e:
+        db.session.rollback()
+        log_action(f"Admin {current_user.name} failed to delete user {user_id}: {str(e)}", success=False)
+        return {'success': False, 'message': 'Failed to delete user and related records.'}, 500
 
 
 @auth.route('/users/delete-bulk', methods=['POST'])
 @login_required
+@admin_required
 def delete_bulk_users():
-    ids = request.get_json().get('user_ids', [])
+    data = request.get_json(silent=True) or {}
+    ids = data.get('user_ids', [])
     if not ids:
         return {'success': False, 'message': 'No user IDs provided.'}, 400
 
@@ -183,11 +193,21 @@ def delete_bulk_users():
 
     users_to_delete = User.query.filter(User.id.in_(ids), User.id != current_user.id).all()
     deleted_ids = [u.id for u in users_to_delete]
-    for u in users_to_delete:
-        db.session.delete(u)
-    db.session.commit()
-    log_action(f"Admin {current_user.name} deleted users in bulk: {deleted_ids}")
-    return {'success': True, 'message': f'Deleted {len(deleted_ids)} users.', 'deleted_ids': deleted_ids}
+
+    if not deleted_ids:
+        return {'success': False, 'message': 'No valid users found to delete.'}, 404
+
+    try:
+        cleanup_user_constraints(deleted_ids)
+        for user in users_to_delete:
+            db.session.delete(user)
+        db.session.commit()
+        log_action(f"Admin {current_user.name} deleted users in bulk with related records: {deleted_ids}")
+        return {'success': True, 'message': f'Deleted {len(deleted_ids)} users.', 'deleted_ids': deleted_ids}
+    except Exception as e:
+        db.session.rollback()
+        log_action(f"Admin {current_user.name} failed bulk delete for users {deleted_ids}: {str(e)}", success=False)
+        return {'success': False, 'message': 'Failed to delete selected users and related records.'}, 500
 
 # 4040423194
 # 4040423194
@@ -311,3 +331,26 @@ def settings():
 
     log_action(f"Admin {current_user.name} accessed application settings page")
     return render_template('settings.html', settings=settings_dict)
+
+@auth.route('/register', methods=['POST'])
+@login_required
+@admin_required
+def register():
+    if request.method == 'POST':
+        # data = request.get_json()
+        email = request.form.get('email')
+        username = request.form.get('username')
+        role = request.form.get('role')
+        name = request.form.get('name')
+        sid = request.form.get('sid')
+        password = 'randompassword'  # In a real application, you would generate a secure random password or allow the user to set it
+        user = User.query.filter_by(email=email).first()
+        if user:
+            return {'success': False, 'message': 'User already exists'}, 400
+        user = User(email=email, name=name, username=username, role=role, sid=sid, password=password)
+        db.session.add(user)
+        db.session.commit()
+        log_action(f"New user registered: {name} ({email})")
+        return redirect(url_for('auth.users'))
+    
+    # return render_template('auth/register.html')

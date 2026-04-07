@@ -9,23 +9,28 @@ import logging
 from app.models import User, OvertimeEntry, OTP, Configuration
 
 
+def _current_role():
+    return (getattr(current_user, 'role', '') or '').strip().lower()
+
+
 def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'manager':
-            # abort(403)  # Forbidden
-            flash('503: Access denied: Managers only.', 'error')
+        role = _current_role()
+        if not current_user.is_authenticated or ('manager' not in role and 'super' not in role):
+            flash('503: Access denied: Managers or super admins only.', 'error')
             return redirect(url_for('index'))
         return func(*args, **kwargs)
     
     return wrapper
 
+
 def sysadmin_required(func):
      @wraps(func)
      def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'sysadmin':
-            # abort(403)  # Forbidden
-            flash('503: Access denied: Managers only.', 'error')
+        role = _current_role()
+        if not current_user.is_authenticated or 'super' not in role:
+            flash('503: Access denied: Super users only.', 'error')
             return redirect(url_for('index'))
         return func(*args, **kwargs)
     

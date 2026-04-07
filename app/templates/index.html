@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <!-- Header -->
   <div class="mb-8">
-    {% if is_manager %}
+    {% if is_super_admin %}
+      <h1 class="text-4xl font-extrabold text-brand">Super Admin Dashboard - {{ current_user_name }}</h1>
+      <p class="text-lg text-gray-600 mt-2">Monitor organization-wide overtime, manage users, and keep approvals moving.</p>
+    {% elif is_manager %}
       <h1 class="text-4xl font-extrabold text-brand">Manager Dashboard - {{ current_user_name }}</h1>
       <p class="text-lg text-gray-600 mt-2">Track and analyze overtime trends across your team.</p>
     {% else %}
@@ -12,22 +14,19 @@
     {% endif %}
   </div>
 
-  <!-- MANAGER VIEW: Key metrics cards (all analytics) -->
-  {% if is_manager %}
+  {% if is_manager or is_super_admin %}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <!-- Total Entries -->
     <div class="bg-gradient-to-br from-brand/20 to-brand/5 border border-brand/30 rounded-xl p-6 shadow-soft">
       <div class="flex justify-between items-start">
         <div>
-          <p class="text-sm font-medium text-gray-600">Total Entries</p>
+          <p class="text-sm font-medium text-gray-600">{% if is_super_admin %}Org Entries{% else %}Total Entries{% endif %}</p>
           <p class="text-3xl font-bold text-brand mt-2">{{ total_entries }}</p>
         </div>
         <span class="text-3xl">📋</span>
       </div>
-      <p class="text-xs text-gray-500 mt-2">All-time logged entries</p>
+      <p class="text-xs text-gray-500 mt-2">{% if is_super_admin %}Across all teams{% else %}All-time logged entries{% endif %}</p>
     </div>
 
-    <!-- Total Hours -->
     <div class="bg-gradient-to-br from-blue-50 to-blue-5 border border-blue-200 rounded-xl p-6 shadow-soft">
       <div class="flex justify-between items-start">
         <div>
@@ -36,10 +35,9 @@
         </div>
         <span class="text-3xl">⏱️</span>
       </div>
-      <p class="text-xs text-gray-500 mt-2">Cumulative overtime hours</p>
+      <p class="text-xs text-gray-500 mt-2">{% if is_super_admin %}Company-wide overtime hours{% else %}Cumulative overtime hours{% endif %}</p>
     </div>
 
-    <!-- This Month Hours -->
     <div class="bg-gradient-to-br from-green-50 to-green-5 border border-green-200 rounded-xl p-6 shadow-soft">
       <div class="flex justify-between items-start">
         <div>
@@ -51,7 +49,6 @@
       <p class="text-xs text-gray-500 mt-2">Hours logged this month</p>
     </div>
 
-    <!-- Approval Status -->
     <div class="bg-gradient-to-br from-purple-50 to-purple-5 border border-purple-200 rounded-xl p-6 shadow-soft">
       <div class="flex justify-between items-start">
         <div>
@@ -64,9 +61,36 @@
     </div>
   </div>
 
-  <!-- Content row: Top contributors + Recent entries -->
+  {% if is_super_admin %}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <p class="text-sm font-medium text-gray-600">Active Users</p>
+      <p class="text-3xl font-bold text-brand mt-2">{{ total_users }}</p>
+      <p class="text-xs text-gray-500 mt-2">Accounts in the platform</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <p class="text-sm font-medium text-gray-600">Managers</p>
+      <p class="text-3xl font-bold text-blue-600 mt-2">{{ manager_count }}</p>
+      <p class="text-xs text-gray-500 mt-2">Reviewers handling approvals</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <p class="text-sm font-medium text-gray-600">Staff Users</p>
+      <p class="text-3xl font-bold text-green-600 mt-2">{{ staff_count }}</p>
+      <p class="text-xs text-gray-500 mt-2">Employees submitting overtime</p>
+    </div>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-8">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Super Admin Quick Actions</h3>
+    <div class="flex flex-wrap gap-3">
+      <a href="{{ url_for('auth.users') }}" class="inline-flex items-center bg-brand text-white py-2 px-4 rounded-lg hover:bg-brand-700 transition font-medium">Manage Users</a>
+      <a href="{{ url_for('auth.settings') }}" class="inline-flex items-center bg-white text-brand border-2 border-brand py-2 px-4 rounded-lg hover:bg-brand/5 transition font-medium">System Settings</a>
+      <a href="{{ url_for('main.view_entries') }}" class="inline-flex items-center bg-gray-900 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition font-medium">Review All Entries</a>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <!-- Top Contributors -->
     <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Contributors (This Month)</h3>
       {% if top_users %}
@@ -83,9 +107,8 @@
       {% endif %}
     </div>
 
-    <!-- Recent Entries (All) -->
     <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Entries (All Team)</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Entries {% if is_super_admin %}(All Teams){% else %}(All Team){% endif %}</h3>
       {% if recent_entries %}
         <div class="space-y-3">
           {% for entry in recent_entries %}
@@ -113,9 +136,7 @@
 
   {% else %}
 
-  <!-- STAFF VIEW: Personal metrics -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <!-- My Total Entries -->
     <div class="bg-gradient-to-br from-brand/20 to-brand/5 border border-brand/30 rounded-xl p-6 shadow-soft">
       <div class="flex justify-between items-start">
         <div>
@@ -127,7 +148,6 @@
       <p class="text-xs text-gray-500 mt-2">Total logged entries</p>
     </div>
 
-    <!-- My Total Hours -->
     <div class="bg-gradient-to-br from-blue-50 to-blue-5 border border-blue-200 rounded-xl p-6 shadow-soft">
       <div class="flex justify-between items-start">
         <div>
@@ -139,7 +159,6 @@
       <p class="text-xs text-gray-500 mt-2">All-time overtime</p>
     </div>
 
-    <!-- My Month Hours -->
     <div class="bg-gradient-to-br from-green-50 to-green-5 border border-green-200 rounded-xl p-6 shadow-soft">
       <div class="flex justify-between items-start">
         <div>
@@ -151,7 +170,6 @@
       <p class="text-xs text-gray-500 mt-2">Hours this month</p>
     </div>
 
-    <!-- My Approval Status -->
     <div class="bg-gradient-to-br from-purple-50 to-purple-5 border border-purple-200 rounded-xl p-6 shadow-soft">
       <div class="flex justify-between items-start">
         <div>
@@ -164,7 +182,6 @@
     </div>
   </div>
 
-  <!-- Personal Recent Entries -->
   <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-8">
     <h3 class="text-lg font-semibold text-gray-900 mb-4">My Recent Entries</h3>
     {% if recent_personal %}
@@ -193,16 +210,29 @@
 
   {% endif %}
 
-  <!-- Call to action -->
   <div class="bg-gradient-to-r from-brand/20 via-white to-brand/10 border border-brand/30 rounded-xl p-8 text-center shadow-soft">
-    <h3 class="text-xl font-semibold text-gray-900 mb-4">Need to log more hours?</h3>
-    <p class="text-gray-600 mb-6">{% if is_manager %}Review and approve pending entries.{% else %}Submit your overtime for review and approval.{% endif %}</p>
-    <div class="flex gap-4 justify-center flex-wrap">
-      {% if not is_manager %}
+    {% if is_super_admin %}
+      <h3 class="text-xl font-semibold text-gray-900 mb-4">Need to manage the platform?</h3>
+      <p class="text-gray-600 mb-6">Review organization-wide overtime, manage accounts, and update system settings.</p>
+      <div class="flex gap-4 justify-center flex-wrap">
+        <a href="{{ url_for('auth.users') }}" class="inline-block bg-brand text-white py-2 px-6 rounded-lg hover:bg-brand-700 transition font-medium">Manage Users</a>
+        <a href="{{ url_for('auth.settings') }}" class="inline-block bg-white text-brand border-2 border-brand py-2 px-6 rounded-lg hover:bg-brand/5 transition font-medium">System Settings</a>
+        <a href="{{ url_for('main.view_entries') }}" class="inline-block bg-gray-900 text-white py-2 px-6 rounded-lg hover:bg-gray-700 transition font-medium">View All Entries</a>
+      </div>
+    {% elif is_manager %}
+      <h3 class="text-xl font-semibold text-gray-900 mb-4">Need to clear pending reviews?</h3>
+      <p class="text-gray-600 mb-6">Review and approve pending entries from your team.</p>
+      <div class="flex gap-4 justify-center flex-wrap">
+        <a href="{{ url_for('main.view_entries') }}" class="inline-block bg-white text-brand border-2 border-brand py-2 px-6 rounded-lg hover:bg-brand/5 transition font-medium">Review All Entries</a>
+      </div>
+    {% else %}
+      <h3 class="text-xl font-semibold text-gray-900 mb-4">Need to log more hours?</h3>
+      <p class="text-gray-600 mb-6">Submit your overtime for review and approval.</p>
+      <div class="flex gap-4 justify-center flex-wrap">
         <a href="/log" class="inline-block bg-brand text-white py-2 px-6 rounded-lg hover:bg-brand-700 transition font-medium">Log Overtime</a>
-      {% endif %}
-      <a href="/entries" class="inline-block bg-white text-brand border-2 border-brand py-2 px-6 rounded-lg hover:bg-brand/5 transition font-medium">{% if is_manager %}Review All Entries{% else %}View My Entries{% endif %}</a>
-    </div>
+        <a href="/entries" class="inline-block bg-white text-brand border-2 border-brand py-2 px-6 rounded-lg hover:bg-brand/5 transition font-medium">View My Entries</a>
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

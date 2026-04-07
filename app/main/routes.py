@@ -59,15 +59,25 @@ def view_entries():
     employee_name = request.args.get('employee_name')
     assigned = request.args.get('assigned')
 
-    # Manager default should show entries assigned to them, unless explicitly set to all
-    if current_user.role == 'manager':
-        if assigned not in ['all', 'mine']:
-            assigned = 'mine'
+    user_role = (current_user.role or '').strip().lower()
+    is_manager = 'manager' in user_role
+    is_super_admin = 'super' in user_role
+    can_review_entries = is_manager or is_super_admin
+
+    if can_review_entries:
         query = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id)
-        if assigned == 'mine':
-            query = query.filter(OvertimeEntry.approved_by == current_user.id)
+
+        if is_manager and not is_super_admin:
+            if assigned not in ['all', 'mine']:
+                assigned = 'mine'
+            if assigned == 'mine':
+                query = query.filter(OvertimeEntry.approved_by == current_user.id)
+            employees = User.query.filter(~User.role.ilike('%manager%')).order_by(User.name).all()
+        else:
+            assigned = 'all'
+            employees = User.query.order_by(User.name).all()
+
         entries = query.all()
-        employees = User.query.filter(User.role != 'manager').order_by(User.name).all()
     else:
         assigned = 'all'
         entries = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id).filter(OvertimeEntry.employee_id == current_user.id).all()
@@ -113,8 +123,7 @@ def view_entries():
             return True
         filtered = [e for e in entries if in_range(e)]
 
-    # Filter by employee name if specified (only for managers)
-    if employee_name and current_user.role == 'manager':
+    if employee_name and can_review_entries:
         filtered = [e for e in filtered if e['employee_name'] == employee_name]
 
     total_items = len(filtered)
@@ -137,19 +146,23 @@ def view_entries():
         page=page,
         per_page=per_page,
         total_entries=total_items,
-        total_pages=total_pages
+        total_pages=total_pages,
+        can_review_entries=can_review_entries,
+        is_manager=is_manager,
+        is_super_admin=is_super_admin
     )
 
 
 @bp.route('/entries/<int:entry_id>/approve', methods=['POST'])
 @login_required
 def approve_entry(entry_id):
-    if current_user.role != 'manager':
+    user_role = (current_user.role or '').strip().lower()
+    if 'manager' not in user_role and 'super' not in user_role:
         log_action(f"Unauthorized approval attempt by user {current_user.name} on entry {entry_id}", success=False)
-        return {'success': False, 'message': 'Only managers can approve entries'}, 403
+        return {'success': False, 'message': 'Only managers or super admins can approve entries'}, 403
     
     entry = OvertimeEntry.query.get_or_404(entry_id)
-    data = request.get_json()
+    data = request.get_json() or {}
     approved_hours = data.get('approved_hours', entry.hours)
     
     entry.status = 'approved'
@@ -157,7 +170,8 @@ def approve_entry(entry_id):
     entry.approved_by = current_user.id
     entry.updated_at = datetime.datetime.now()
     db.session.commit()
-    log_action(f"Manager {current_user.name} approved entry {entry_id} for employee ID {entry.employee_id} with approved hours {approved_hours}")
+    approver_label = 'Super admin' if 'super' in user_role else 'Manager'
+    log_action(f"{approver_label} {current_user.name} approved entry {entry_id} for employee ID {entry.employee_id} with approved hours {approved_hours}")
     return {'success': True, 'message': 'Entry approved', 'entry_id': entry_id, 'status': entry.status, 'approved_hours': entry.approved_hours}
 
 
@@ -169,12 +183,19 @@ def download_entries():
     end = request.args.get('end_date')
     employee_name = request.args.get('employee_name')
     assigned = request.args.get('assigned')
-    if current_user.role == 'manager':
-        if assigned not in ['all', 'mine']:
-            assigned = 'mine'
+
+    user_role = (current_user.role or '').strip().lower()
+    is_manager = 'manager' in user_role
+    is_super_admin = 'super' in user_role
+    can_review_entries = is_manager or is_super_admin
+
+    if can_review_entries:
         query = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id)
-        if assigned == 'mine':
-            query = query.filter(OvertimeEntry.approved_by == current_user.id)
+        if is_manager and not is_super_admin:
+            if assigned not in ['all', 'mine']:
+                assigned = 'mine'
+            if assigned == 'mine':
+                query = query.filter(OvertimeEntry.approved_by == current_user.id)
         filtered = query.all()
     else:
         filtered = db.session.query(OvertimeEntry, User).join(User, OvertimeEntry.employee_id == User.id).filter(OvertimeEntry.employee_id == current_user.id).all()
@@ -217,8 +238,7 @@ def download_entries():
             return True
         entries = [e for e in entries if in_range(e)]
     
-    # Apply employee filter for managers
-    if employee_name and current_user.role == 'manager':
+    if employee_name and can_review_entries:
         entries = [e for e in entries if e['employee_name'] == employee_name]
     
     # Convert back to format expected by pandas
@@ -229,8 +249,6 @@ def download_entries():
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Overtime')
     output.seek(0)
-    # flash('Overtime entries downloaded successfully!', 'success')
-    # return send_file(output, download_name='overtime_entries.xlsx', as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')   
     excelfile = f"overtime_entries_{current_user.name}.xlsx"
     log_action(f"User {current_user.name} downloaded entries with filters - Start: {start}, End: {end}, Employee: {employee_name}")
     return send_file(output, download_name=excelfile, as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')   

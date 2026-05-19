@@ -25,7 +25,7 @@ coverage/
 .pytest_cache/
 migrations/versions/*.py
 *.iml
-*.env.*
+# *.env.*
 *.pem
 *.key
 *.crt

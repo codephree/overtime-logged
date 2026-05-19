@@ -109,7 +109,7 @@ def send_approval_email(entry_id):
         mail.send(msg)
         return True
     except Exception as e:
-        print(f"Failed to send approval email: {e}")
+        logging.error(f"Failed to send approval email: {e}")
         return False
 
 
@@ -141,6 +141,7 @@ def send_otp_email(user_id, otp_code):
         mail.send(msg)
         return True
     except Exception as e:
-        print(f"Failed to send OTP email: {e}")
+        # print(f"Failed to send OTP email: {e}")
+        logging.error(f"Failed to send OTP email: {e}")
         return False
 

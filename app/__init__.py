@@ -10,8 +10,11 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 from flask_toastr import Toastr
 
+
+
 # Initialize Flask application
 app = Flask(__name__)
+
 
 # Load configuration
 app.config.from_object(Config)
@@ -32,6 +35,7 @@ toastr = Toastr(app)
 
 # Create database tables if they don't exist
 with app.app_context():
+    # print(os.environ.get('DATABASE_URL'))
     db.create_all()
 
 # home route for testing purposes   
@@ -159,7 +163,6 @@ def index():
                           personal_approved=personal_approved,
                           personal_month_hours=personal_month_hours,
                           recent_personal=recent_personal)
-
 
 
 # Register blueprints

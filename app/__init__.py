@@ -9,6 +9,7 @@ from app.models import OvertimeEntry, User
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from flask_toastr import Toastr
+from app.models import User
 
 
 
@@ -35,8 +36,11 @@ toastr = Toastr(app)
 
 # Create database tables if they don't exist
 with app.app_context():
-    # print(os.environ.get('DATABASE_URL'))
-    db.create_all()
+    @app.before_request
+    def ensure_default_user():
+        with app.app_context():
+            db.create_all()
+            User.create_default_admin()
 
 # home route for testing purposes   
 

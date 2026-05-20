@@ -45,6 +45,18 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username} ({self.email})>'
     
+    def create_default_admin():
+        if not User.query.filter_by(username='admin').first():
+            admin_user = User(
+                sid='admin001',
+                username='admin',
+                name='Admin User',
+                email='admin@example.com',
+                password='admin123',
+                role='super_admin'
+            )
+            db.session.add(admin_user)
+            db.session.commit()
 
 class OTP(db.Model):
     __tablename__ = 'ot_otps'
@@ -84,3 +96,4 @@ class Configuration(db.Model):
     def __repr__(self):
         return f'{self.name} - {self.value}'
   
+

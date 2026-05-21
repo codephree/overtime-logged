@@ -1,6 +1,7 @@
 from app.extensions import db
 from datetime import date, datetime
 from flask_login import UserMixin
+from werkzeug.security import generate_password_hash
 
 class OvertimeEntry(db.Model):
     __tablename__ = 'ot_overtime_entries'
@@ -52,7 +53,7 @@ class User(UserMixin, db.Model):
                 username='admin',
                 name='Admin User',
                 email='admin@example.com',
-                password='admin123',
+                password=generate_password_hash('admin123'),
                 role='super_admin'
             )
             db.session.add(admin_user)

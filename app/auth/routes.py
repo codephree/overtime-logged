@@ -10,6 +10,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 import random
 import uuid
 from app.helpers import admin_required, log_action, send_otp_email, sysadmin_required
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 @auth.route('/login')
@@ -27,15 +28,18 @@ def send_otp():
    if request.method == 'POST':
         data = request.get_json()
         email = data.get('email')
+        password = data.get('password')
         user = User.query.filter_by(email=email).first()
-        if not user:
-            return {'success': False, 'message': 'User not found'}, 404
-        # Generate OTP and save to database
-        # otp_code =   #'123456'  # In a real application, generate a random OTP
-        otp_code = '{:06d}'.format(random.randint(0, 999999))
-        otp_entry = OTP(user_id=user.id, otp_code=otp_code, expires_at=datetime.datetime.now() + datetime.timedelta(minutes=5))
-        db.session.add(otp_entry)
-        db.session.commit()
+        if  user and check_password_hash(user.password, password):
+            # Generate OTP and save to database
+            # otp_code =   #'123456'  # In a real application, generate a random OTP
+            otp_code = '{:06d}'.format(random.randint(0, 999999))
+            otp_entry = OTP(user_id=user.id, otp_code=otp_code, expires_at=datetime.datetime.now() + datetime.timedelta(minutes=5))
+            db.session.add(otp_entry)
+            db.session.commit()
+        else:
+            log_action(f"Attempt to send OTP for non-existent user {email} or incorrect password", success=False)
+            return {'success': False, 'message': 'User not found or incorrect password'}, 404
         # Add your OTP sending logic here
         send_otp_email(user_id=user.id, otp_code=otp_code)
         log_action(f"Sent OTP to user {user.name} ({user.email}) for login attempt")
@@ -47,44 +51,46 @@ def verify_otp():
     if request.method == 'POST':
         data = request.get_json()
         email = data.get('email')
+        password = data.get('password')
         otp_code = data.get('otp')
         user = User.query.filter_by(email=email).first()
         
-        if not user:
+        if  user and check_password_hash(user.password, password):
+            # Continue with OTP verification
+             # print(f"Verifying OTP for user {email}: {otp_code} (found entry: {otp_entry})")  # Debugging statement   
+            otp_entry = OTP.query.filter_by(user_id=user.id, otp_code=otp_code).first()
+            if not otp_entry or otp_entry.expires_at < datetime.datetime.now():
+                log_action(f"Attempt to verify OTP for user {email} failed: Invalid or expired OTP", success=False)
+                return {'success': False, 'message': 'Invalid or expired OTP'}, 400
+            
+            # OTP is valid - log the user in (this is a simplified example)
+            log_action(f"User {user.name} successfully verified OTP and logged in")
+            login = login_user(user)
+            # next_page = request.args.get('next')
+            # return redirect(next_page or url_for('index'))
+            if login:
+                # Log successful login attempt
+                attempt = LoginAttempt(user_id=user.id, successful=True, ip_address=request.remote_addr)
+                log_action(f"User {user.name} logged in successfully from IP {request.remote_addr}")
+                db.session.add(attempt)
+                db.session.commit()
+                
+                #delete the OTP entry after successful verification
+                OTP.query.filter_by(id=otp_entry.id).delete()
+                # In a real application, you would set a session or token here
+                
+                return {'success': True, 'message': 'OTP verified successfully'}
+            else:
+                # Log failed login attempt
+                attempt = LoginAttempt(user_id=user.id, successful=False, ip_address=request.remote_addr)
+                log_action(f"User {user.name} failed to log in from IP {request.remote_addr}")
+                db.session.add(attempt)
+                db.session.commit()
+                return {'success': False, 'message': 'Login failed'}, 500
+        else:
             log_action(f"Attempt to verify OTP for non-existent user {email}", success=False)
             return {'success': False, 'message': 'User not found'}, 404
-        otp_entry = OTP.query.filter_by(user_id=user.id, otp_code=otp_code).first()
-
-        # print(f"Verifying OTP for user {email}: {otp_code} (found entry: {otp_entry})")  # Debugging statement   
-        if not otp_entry or otp_entry.expires_at < datetime.datetime.now():
-            log_action(f"Attempt to verify OTP for user {email} failed: Invalid or expired OTP", success=False)
-            return {'success': False, 'message': 'Invalid or expired OTP'}, 400
-        
-        # OTP is valid - log the user in (this is a simplified example)
-        log_action(f"User {user.name} successfully verified OTP and logged in")
-        login = login_user(user)
-        # next_page = request.args.get('next')
-        # return redirect(next_page or url_for('index'))
-        if login:
-            # Log successful login attempt
-            attempt = LoginAttempt(user_id=user.id, successful=True, ip_address=request.remote_addr)
-            log_action(f"User {user.name} logged in successfully from IP {request.remote_addr}")
-            db.session.add(attempt)
-            db.session.commit()
-            
-            #delete the OTP entry after successful verification
-            OTP.query.filter_by(id=otp_entry.id).delete()
-              # In a real application, you would set a session or token here
-              
-            return {'success': True, 'message': 'OTP verified successfully'}
-        else:
-            # Log failed login attempt
-            attempt = LoginAttempt(user_id=user.id, successful=False, ip_address=request.remote_addr)
-            log_action(f"User {user.name} failed to log in from IP {request.remote_addr}")
-            db.session.add(attempt)
-            db.session.commit()
-            return {'success': False, 'message': 'Login failed'}, 500
-
+       
 
 
 @auth.route('/logout')
@@ -235,7 +241,7 @@ def import_users():
             username = (row.get('username') or '').strip()  # optional, not used in this example
             sid = (row.get('sid') or '').strip()  # optional, not used in this example
             role = (row.get('role') or '').strip()  # optional, not used in this example
-            password = (row.get('password') or '').strip()  # optional, not used in this example
+            password = generate_password_hash(row.get('password') or '').strip()  # optional, not used in this example
             if not email or not name:
                 skipped += 1
                 continue
@@ -343,7 +349,7 @@ def register():
         role = request.form.get('role')
         name = request.form.get('name')
         sid = request.form.get('sid')
-        password = 'randompassword'  # In a real application, you would generate a secure random password or allow the user to set it
+        password = generate_password_hash('randompassword')  # In a real application, you would generate a secure random password or allow the user to set it
         user = User.query.filter_by(email=email).first()
         if user:
             return {'success': False, 'message': 'User already exists'}, 400

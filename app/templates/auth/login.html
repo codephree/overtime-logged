@@ -32,6 +32,18 @@
                                             >
                                         </div>
 
+                                         <div>
+                                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                            <input
+                                                type="password"
+                                                id="password"
+                                                name="password"
+                                                required
+                                                placeholder="••••••••"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                            >
+                                        </div>
+
                                         <!-- Send OTP Button -->
                                         <button
                                             type="button"
@@ -78,6 +90,7 @@
         const sendOtpBtn = document.getElementById('sendOtpBtn');
         const otpSection = document.getElementById('otpSection');
         const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
         const loginForm = document.getElementById('loginForm');
         const errorMsg = document.getElementById('errorMsg');
         const emailSection = document.getElementById('emailSection');
@@ -90,7 +103,7 @@
                 sendOtpBtn.textContent = 'OTP Sent';
                 sendOtpBtn.disabled = true;
                 errorMsg.classList.add('hidden');
-                callAPI('/send-otp', { email: emailInput.value })
+                callAPI('/send-otp', { email: emailInput.value, password: passwordInput.value })
                     .then(data => {
                         if (data.success) {
                             fullName.textContent = data.name || 'Back';
@@ -117,9 +130,9 @@
             e.preventDefault();
             const otp = document.getElementById('otp').value;
             if (otp.length === 6) {
-                console.log('Login with:', emailInput.value, otp);
+                console.log('Login with:', emailInput.value, passwordInput.value, otp);
                 // Add your authentication logic here
-                callAPI('/verify-otp', { email: emailInput.value, otp })
+                callAPI('/verify-otp', { email: emailInput.value, password: passwordInput.value, otp })
                     .then(data => {
                         if (data.success) {
                             window.location.href = '/'; // Redirect on success
